@@ -39,12 +39,14 @@ jobs:
     - name: Run SonarQube Scan
       uses: SonarSource/sonarqube-scan-action@v1
       with:
-        env: DEVSECOPS
         args: >
           -Dsonar.projectKey=devsecops-java-project
           -Dsonar.projectName=DevSecOps Java Project
           -Dsonar.host.url=https://sonarcloud.io/
           -Dsonar.login=158e568f06061e5beb615abddc16380e586119c0
+      env:
+        SONAR_HOST_URL: https://sonarcloud.io/
+        SONAR_TOKEN: 158e568f06061e5beb615abddc16380e586119c0
 
     - name: Build Docker image
       run: docker build -t devsecops-java-app .
