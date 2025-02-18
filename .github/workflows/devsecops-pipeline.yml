@@ -42,8 +42,8 @@ jobs:
         args: >
           -Dsonar.projectKey=devsecops-java-project
           -Dsonar.projectName=DevSecOps Java Project
-          -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }}
-          -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+          -Dsonar.host.url=https://sonarcloud.io/
+          -Dsonar.login=158e568f06061e5beb615abddc16380e586119c0
 
     - name: Build Docker image
       run: docker build -t devsecops-java-app .
