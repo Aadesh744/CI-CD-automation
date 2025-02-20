@@ -2,7 +2,7 @@ name: DevSecOps Pipeline
 
 on:
   workflow_dispatch:
-  
+
   push:
     branches:
       - main
@@ -18,14 +18,75 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Set up JDK 11
+    - name: Set up JDK 17
       uses: actions/setup-java@v2
       with:
-        java-version: '11'
+        java-version: '17'
         distribution: 'adopt'
 
+    - name: Cache Maven
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+
     - name: Build with Maven
-      run: mvn clean install
+      run: mvn clean install -DskipTests -Ddependency-check.skip=true
+
+    - name: Archive JAR
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-jar
+        path: target/*.jar
+
+  unit-test:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v2
+      with:
+        java-version: '17'
+        distribution: 'adopt'
+
+    - name: Cache Maven
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+
+    - name: Run Unit Tests
+      run: mvn test -Ddependency-check.skip=true
+
+  owasp-dependency-check:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v2
+      with:
+        java-version: '17'
+        distribution: 'adopt'
+
+    - name: Cache Maven
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
 
     - name: Run OWASP Dependency-Check
       run: mvn org.owasp:dependency-check-maven:check
@@ -33,20 +94,22 @@ jobs:
     - name: Archive OWASP Dependency-Check Report
       uses: actions/upload-artifact@v4
       with:
-        name: dependency-check-report
+        name: owasp-dependency-check-report
         path: target/dependency-check-report.html
 
-    - name: Run SonarQube Scan
-      uses: SonarSource/sonarqube-scan-action@v1
+  trivy-scan:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Download JAR
+      uses: actions/download-artifact@v4
       with:
-        args: >
-          -Dsonar.projectKey=devsecops-java-project
-          -Dsonar.projectName=DevSecOps Java Project
-          -Dsonar.host.url=https://sonarcloud.io/
-          -Dsonar.login=158e568f06061e5beb615abddc16380e586119c0
-      env:
-        SONAR_HOST_URL: https://sonarcloud.io/
-        SONAR_TOKEN: 158e568f06061e5beb615abddc16380e586119c0
+        name: app-jar
+        path: target/
 
     - name: Build Docker image
       run: docker build -t devsecops-java-app .
@@ -61,10 +124,81 @@ jobs:
         sudo apt-get install -y trivy
 
     - name: Scan Docker image with Trivy
-      run: trivy image devsecops-java-app
+      run: trivy image -o trivy-scan-report.txt devsecops-java-app
 
     - name: Archive Trivy Report
       uses: actions/upload-artifact@v4
       with:
-        name: trivy-report
-        path: trivy-image-report.txt
+        name: trivy-scan-report
+        path: trivy-scan-report.txt
+
+  sonar-scan:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Build Maven
+      run: mvn compile -DskipTests -Ddependency-check.skip=true
+
+    - name: Run SonarQube Scan
+      uses: SonarSource/sonarqube-scan-action@v2
+      with:
+        args: >
+          -Dsonar.projectKey=naveen-sriramulu_devsecops-sample
+          -Dsonar.projectName=devsecops-sample
+          -Dsonar.host.url=https://sonarcloud.io/
+          -Dsonar.login=c6da0c254bcf9690cedb8fa6df3f5282cbaed02e
+          -Dsonar.organization=naveen-sriramulu
+          -Dsonar.java.binaries=target/classes
+      env:
+        SONAR_HOST_URL: https://sonarcloud.io/
+        SONAR_TOKEN: c6da0c254bcf9690cedb8fa6df3f5282cbaed02e
+    
+    - name: Fetch Open Issues from SonarCloud API
+      run: |
+        # Create directory for storing the report
+        mkdir -p sonar-reports
+
+        # Fetch open issues from SonarCloud API and save them to a JSON file
+        curl -u c6da0c254bcf9690cedb8fa6df3f5282cbaed02e "https://sonarcloud.io/api/issues/search?componentKeys=naveen-sriramulu_devsecops-sample&statuses=OPEN" -o sonar-reports/open-issues.json
+    
+    - name: Generate HTML Report from Open Issues
+      run: |
+        # Create an HTML file to store the open issues
+        echo "<html><body><h1>Open Issues Report</h1>" > sonar-reports/open-issues.html
+        echo "<table border='1'><tr><th>Key</th><th>Severity</th><th>Message</th><th>File</th><th>Line</th></tr>" >> sonar-reports/open-issues.html
+    
+        # Debug: Print the raw JSON issues
+        jq -r '.issues[] | .key + " " + .severity + " " + .message + " " + .component + " " + (.line | tostring)' sonar-reports/open-issues.json
+    
+        # Read the open issues JSON and format it into an HTML table
+        jq -r '.issues[] | "<tr><td>" + .key + "</td><td>" + .severity + "</td><td>" + .message + "</td><td>" + .component + "</td><td>" + (.line | tostring) + "</td></tr>"' sonar-reports/open-issues.json >> sonar-reports/open-issues.html
+    
+        # Close the HTML tags
+        echo "</table></body></html>" >> sonar-reports/open-issues.html
+        
+    - name: Archive Sonar Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: sonar-open-issues
+        path: sonar-reports/open-issues.html
+    
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build, unit-test, owasp-dependency-check, trivy-scan, sonar-scan]  # Make sure all jobs are completed before deploy
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Deploy to Production
+      run: |
+        exit 1
+        # echo "Deploying the application to production server..."
+        # Example deployment command; replace with actual deployment commands
+        # scp target/*.jar user@production-server:/path/to/deploy/
+        # ssh user@production-server "sudo systemctl restart app"
+        # Note: Make sure to replace with your actual deployment pipeline.
