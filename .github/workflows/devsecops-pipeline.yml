@@ -5,10 +5,10 @@ on:
 
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
-      - master
+      - main
 
 jobs:
   build:
@@ -89,7 +89,7 @@ jobs:
           ${{ runner.os }}-maven-
 
     - name: Run OWASP Dependency-Check
-      run: mvn org.owasp:dependency-check-maven:check
+      run: mvn org.owasp:dependency-check-maven:check -Dformat=HTML -DoutputDirectory=target
 
     - name: Archive OWASP Dependency-Check Report
       uses: actions/upload-artifact@v4
@@ -156,39 +156,28 @@ jobs:
       env:
         SONAR_HOST_URL: https://sonarcloud.io/
         SONAR_TOKEN: c6da0c254bcf9690cedb8fa6df3f5282cbaed02e
-    
+
     - name: Fetch Open Issues from SonarCloud API
       run: |
-        # Create directory for storing the report
         mkdir -p sonar-reports
-
-        # Fetch open issues from SonarCloud API and save them to a JSON file
         curl -u c6da0c254bcf9690cedb8fa6df3f5282cbaed02e "https://sonarcloud.io/api/issues/search?componentKeys=naveen-sriramulu_devsecops-sample&statuses=OPEN" -o sonar-reports/open-issues.json
-    
+
     - name: Generate HTML Report from Open Issues
       run: |
-        # Create an HTML file to store the open issues
         echo "<html><body><h1>Open Issues Report</h1>" > sonar-reports/open-issues.html
         echo "<table border='1'><tr><th>Key</th><th>Severity</th><th>Message</th><th>File</th><th>Line</th></tr>" >> sonar-reports/open-issues.html
-    
-        # Debug: Print the raw JSON issues
-        jq -r '.issues[] | .key + " " + .severity + " " + .message + " " + .component + " " + (.line | tostring)' sonar-reports/open-issues.json
-    
-        # Read the open issues JSON and format it into an HTML table
         jq -r '.issues[] | "<tr><td>" + .key + "</td><td>" + .severity + "</td><td>" + .message + "</td><td>" + .component + "</td><td>" + (.line | tostring) + "</td></tr>"' sonar-reports/open-issues.json >> sonar-reports/open-issues.html
-    
-        # Close the HTML tags
         echo "</table></body></html>" >> sonar-reports/open-issues.html
-        
+
     - name: Archive Sonar Report
       uses: actions/upload-artifact@v4
       with:
         name: sonar-open-issues
         path: sonar-reports/open-issues.html
-    
+
   deploy:
     runs-on: ubuntu-latest
-    needs: [build, unit-test, owasp-dependency-check, trivy-scan, sonar-scan]  # Make sure all jobs are completed before deploy
+    needs: [build, unit-test, owasp-dependency-check, trivy-scan, sonar-scan]
 
     steps:
     - name: Checkout code
@@ -201,4 +190,3 @@ jobs:
         # Example deployment command; replace with actual deployment commands
         # scp target/*.jar user@production-server:/path/to/deploy/
         # ssh user@production-server "sudo systemctl restart app"
-        # Note: Make sure to replace with your actual deployment pipeline.
