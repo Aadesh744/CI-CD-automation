@@ -69,6 +69,10 @@
                     <autoUpdate>false</autoUpdate>
                     <failOnError>false</failOnError>
                     <failBuildOnCVSS>11</failBuildOnCVSS>
+                    <formats>
+                      <format>HTML</format>
+                      <format>XML</format>
+                    </formats>
                 </configuration>
             </plugin>
         </plugins>
