@@ -89,7 +89,7 @@ jobs:
           ${{ runner.os }}-maven-
 
     - name: Run OWASP Dependency-Check
-      run: mvn org.owasp:dependency-check-maven:check -Dformat=HTML -DoutputDirectory=target
+      run: mvn dependency-check:check -DoutputDirectory=target
 
     - name: Archive OWASP Dependency-Check Report
       uses: actions/upload-artifact@v4
