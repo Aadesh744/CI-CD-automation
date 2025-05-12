@@ -91,7 +91,7 @@ jobs:
     - name: Run OWASP Dependency-Check
       run: |
         mvn dependency:purge-local-repository
-        mvn dependency-check:check -DoutputDirectory=target
+        mvn dependency-check:check -DoutputDirectory=target -X
 
     - name: Archive OWASP Dependency-Check Report
       uses: actions/upload-artifact@v4
