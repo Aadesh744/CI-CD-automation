@@ -80,8 +80,16 @@ jobs:
         java-version: '17'
         distribution: 'adopt'
 
+    - name: Cache Maven
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+
     - name: Run OWASP Dependency-Check
-      run: mvn dependency-check:check -DoutputDirectory=target -X
+      run: mvn org.owasp:dependency-check-maven:check -Dformat=HTML -DoutputDirectory=target
 
     - name: Archive OWASP Dependency-Check Report
       uses: actions/upload-artifact@v4
