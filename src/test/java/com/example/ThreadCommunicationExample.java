@@ -1,3 +1,5 @@
+package com.example;
+
 class SharedQueue {
     private boolean available = false;
 

@@ -1,12 +1,14 @@
+package com.example;
+
 import java.util.*;
 
-class Student {
+class CollegeStudent {
     int id;
     String name;
     String department;
     double cgpa;
 
-    public Student(int id, String name, String department, double cgpa) {
+    public CollegeStudent(int id, String name, String department, double cgpa) {
         this.id = id;
         this.name = name;
         this.department = department;
@@ -37,7 +39,7 @@ class Course {
 }
 
 public class CollegeManagement {
-    static List<Student> students = new ArrayList<>();
+    static List<CollegeStudent> students = new ArrayList<>();
     static List<Course> courses = new ArrayList<>();
     static Scanner scanner = new Scanner(System.in);
 
@@ -86,7 +88,7 @@ public class CollegeManagement {
         System.out.print("Enter CGPA: ");
         double cgpa = scanner.nextDouble();
 
-        students.add(new Student(id, name, department, cgpa));
+        students.add(new CollegeStudent(id, name, department, cgpa));
         System.out.println("Student added successfully.");
     }
 
@@ -95,7 +97,7 @@ public class CollegeManagement {
             System.out.println("No students to display.");
         } else {
             System.out.println("\n--- List of Students ---");
-            for (Student student : students) {
+            for (CollegeStudent student : students) {
                 System.out.println(student);
             }
         }
