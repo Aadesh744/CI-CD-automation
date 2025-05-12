@@ -46,9 +46,14 @@
             <version>3.4.1</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.kerby</groupId>
-            <artifactId>kerb-server</artifactId>
-            <version>1.0.1</version>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+            <version>5.3.17</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+            <version>4.1.42.Final</version>
         </dependency>
     </dependencies>
 
